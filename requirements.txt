@@ -1,0 +1,11 @@
+cssutils
+beautifulsoup4
+lxml
+yt-dlp
+pydub
+whisper
+pyannote-audio
+torchaudio
+torch
+huggingface_hub
+translate

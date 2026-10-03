@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "utilities-toolkit"
+version = "0.1.0"
+description = "Audio conversion, YouTube download, translation, and transcription utilities"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "cssutils",
+  "beautifulsoup4",
+  "lxml",
+  "yt-dlp",
+  "pydub",
+  "whisper",
+  "pyannote-audio",
+  "torchaudio",
+  "torch",
+  "huggingface_hub",
+  "translate",
+]
+
+[project.scripts]
+convert-audio = "utilities.cli:convert_audio_cli"
+download-youtube = "utilities.cli:download_youtube_cli"
+translate-text = "utilities.cli:translate_text_cli"
+transcribe-audio = "utilities.cli:transcribe_audio_cli"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
