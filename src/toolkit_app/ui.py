@@ -363,7 +363,19 @@ def _transcribe_tab() -> None:
     language = left.text_input("Language", value="auto", help="Use auto to detect the spoken language.")
     model_size = middle.selectbox("Whisper model", ["tiny", "base", "small", "medium", "large"], index=3)
     output_format = right.selectbox("Transcript format", ["txt", "srt", "vtt", "json"])
-    if st.button("Transcribe audio", type="primary", disabled=uploaded is None):
+    transcription_action = st.empty()
+    transcribe_clicked = transcription_action.button(
+        "Transcribe audio",
+        type="primary",
+        disabled=uploaded is None,
+    )
+    if transcribe_clicked:
+        transcription_action.button(
+            "Transcribing...",
+            icon=":material/hourglass_top:",
+            disabled=True,
+            key="transcribing-audio",
+        )
         try:
             from utilities.transcription_tools import transcribe_audio
 
@@ -372,16 +384,31 @@ def _transcribe_tab() -> None:
                 input_path = _save_upload(uploaded, directory)
                 output_dir = directory / "transcripts"
                 output_dir.mkdir()
-                with st.spinner(f"Transcribing with the {model_size} model..."):
+                with st.status(f"Transcribing with the {model_size} model...", expanded=True) as transcription_status:
+                    progress = st.progress(0, text="Preparing transcription...")
+
+                    def update_transcription_progress(stage: str) -> None:
+                        stages = {
+                            "loading_model": (0.2, "Loading Whisper model..."),
+                            "transcribing": (0.35, "Transcribing audio..."),
+                            "writing_output": (0.85, "Writing transcript files..."),
+                        }
+                        progress_value, message = stages[stage]
+                        progress.progress(progress_value, text=message)
+                        transcription_status.write(message)
+
                     transcribe_audio(
                         str(input_path),
                         input_language=language.strip() or "auto",
                         output_dir=str(output_dir),
                         output_format=output_format,
                         model_size=model_size,
+                        progress_callback=update_transcription_progress,
                     )
                 generated_files = sorted(path for path in output_dir.iterdir() if path.is_file())
                 _set_results("transcribe-results", generated_files)
+                progress.progress(1.0, text="Transcription complete")
+                transcription_status.update(label="Transcription complete", state="complete", expanded=False)
             st.success("Transcription complete.")
         except Exception as exc:
             st.error(f"Transcription failed: {exc}. Check FFMPEG_DIR in the project-root .env file.")

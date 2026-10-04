@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from typing import Callable
 
 from .ffmpeg_config import configure_ffmpeg_path
 
@@ -38,6 +39,7 @@ def transcribe_audio(
     output_dir="na",
     output_format="all",
     model_size="medium",
+    progress_callback: Callable[[str], None] | None = None,
 ):
     """Transcribe an audio file using Whisper and save output to disk."""
     if whisper is None or torch is None:
@@ -52,13 +54,19 @@ def transcribe_audio(
         output_dir = Path(output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
 
+    if progress_callback:
+        progress_callback("loading_model")
     model = whisper.load_model(model_size).to(device)
 
+    if progress_callback:
+        progress_callback("transcribing")
     if input_language == "auto":
         result = model.transcribe(audio=input_path, task=task)
     else:
         result = model.transcribe(audio=input_path, language=input_language, task=task)
 
+    if progress_callback:
+        progress_callback("writing_output")
     writer = whisper.utils.get_writer(output_format=output_format, output_dir=str(output_dir))
     writer(result, Path(input_path).stem, options=dict(
         highlight_words=False,
