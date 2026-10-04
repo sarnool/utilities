@@ -13,25 +13,40 @@ The project is structured as a proper Python package and is installed via `pip i
 
 ## Quick start
 
-Use Python 3.11 for this project.
+Requires Python 3.10 or newer.
 
 ```powershell
 cd c:\workspace\Utilities
 python -m venv .venv
 .venv\Scripts\activate
 python -m pip install -U pip
-python -m pip install -e .
+python -m pip install -e ".[ui]"
 ```
 
-Once installed, you can use the package from Python or the CLI entry points, for example:
+After installation, run the utilities in either of these ways:
+
+**CLI**
 
 ```powershell
-python -c "import utilities; print(utilities.convert_audio)"
 convert-audio --help
 download-youtube --help
 translate-text --help
 transcribe-audio --help
 ```
+
+**Frontend**
+
+Start the local browser interface for audio conversion, media downloads, text translation, and transcription with:
+
+```powershell
+python -m streamlit run src/toolkit_app/ui.py
+```
+
+Keep the Python environment activated. Node.js and npm are not required.
+
+### FFmpeg configuration
+
+Set `FFMPEG_DIR` in the project-root `.env` to the folder containing the FFmpeg executable. Copy `.env.example` to `.env` and set the path for your machine. All conversion, download, and transcription features use this configured folder.
 
 ---
 
@@ -40,17 +55,21 @@ transcribe-audio --help
 ```text
 Utilities/
 ├── README.md
+├── .env.example
 ├── pyproject.toml
 ├── requirements.txt
 ├── src/
+│   ├── toolkit_app/
+│   │   ├── __init__.py
+│   │   ├── cli.py
+│   │   └── ui.py
 │   └── utilities/
 │       ├── __init__.py
 │       ├── audio_tools.py
 │       ├── youtube_tools.py
 │       ├── translation_tools.py
 │       ├── transcription_tools.py
-│       ├── html_cleaner.py
-│       └── cli.py
+│       └── html_cleaner.py
 ├── tests/
 │   └── test_standard_project.py
 └── .venv/

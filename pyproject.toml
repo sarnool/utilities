@@ -14,19 +14,23 @@ dependencies = [
   "lxml",
   "yt-dlp",
   "pydub",
-  "whisper",
+  "openai-whisper",
   "pyannote-audio",
   "torchaudio",
   "torch",
   "huggingface_hub",
   "translate",
+  "python-dotenv",
 ]
 
+[project.optional-dependencies]
+ui = ["streamlit>=1.40,<2"]
+
 [project.scripts]
-convert-audio = "utilities.cli:convert_audio_cli"
-download-youtube = "utilities.cli:download_youtube_cli"
-translate-text = "utilities.cli:translate_text_cli"
-transcribe-audio = "utilities.cli:transcribe_audio_cli"
+convert-audio = "toolkit_app.cli:convert_audio_cli"
+download-youtube = "toolkit_app.cli:download_youtube_cli"
+translate-text = "toolkit_app.cli:translate_text_cli"
+transcribe-audio = "toolkit_app.cli:transcribe_audio_cli"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

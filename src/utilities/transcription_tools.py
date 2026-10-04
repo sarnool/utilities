@@ -5,6 +5,8 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+from .ffmpeg_config import configure_ffmpeg_path
+
 try:
     import torch
     import torchaudio
@@ -41,6 +43,7 @@ def transcribe_audio(
     if whisper is None or torch is None:
         raise RuntimeError("Transcription support is unavailable because whisper/torch could not be imported.")
 
+    configure_ffmpeg_path()
     device = get_device()
 
     if output_dir == "na":

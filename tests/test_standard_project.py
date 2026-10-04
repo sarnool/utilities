@@ -8,7 +8,7 @@ def test_package_modules_exist():
         "utilities.translation_tools",
         "utilities.transcription_tools",
         "utilities.html_cleaner",
-        "utilities.cli",
+        "toolkit_app.cli",
     ]
 
     for name in modules:

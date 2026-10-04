@@ -6,6 +6,8 @@ import os
 import subprocess
 from pathlib import Path
 
+from .ffmpeg_config import get_ffmpeg_executable
+
 
 def convert_audio(input_file: str, output_file: str, format_name: str = "mp3") -> str:
     """Convert an audio file to the requested format via ffmpeg."""
@@ -14,7 +16,7 @@ def convert_audio(input_file: str, output_file: str, format_name: str = "mp3") -
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     cmd = [
-        "ffmpeg",
+        get_ffmpeg_executable(),
         "-y",
         "-i",
         str(input_path),

@@ -4,16 +4,16 @@ from __future__ import annotations
 
 import argparse
 
-from .audio_tools import convert_audio
-from .youtube_tools import download_youtube_media
+from utilities.audio_tools import convert_audio
+from utilities.youtube_tools import download_youtube_media
 
 try:
-    from .translation_tools import translate_file
+    from utilities.translation_tools import translate_file
 except Exception:  # pragma: no cover - optional dependency guard
     translate_file = None
 
 try:
-    from .transcription_tools import transcribe_audio
+    from utilities.transcription_tools import transcribe_audio
 except Exception:  # pragma: no cover - optional dependency guard
     transcribe_audio = None
 

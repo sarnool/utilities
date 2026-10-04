@@ -3,9 +3,11 @@ beautifulsoup4
 lxml
 yt-dlp
 pydub
-whisper
+openai-whisper
 pyannote-audio
 torchaudio
 torch
 huggingface_hub
 translate
+python-dotenv
+streamlit>=1.40,<2

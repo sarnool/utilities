@@ -10,8 +10,7 @@ from pathlib import Path
 
 import yt_dlp
 
-
-FFMPEG_DIR = r"C:\workspace\ffmpeg\ffmpeg-7.1.1-essentials_build\bin"
+from .ffmpeg_config import get_ffmpeg_dir
 
 
 def list_formats(url: str):
@@ -97,6 +96,7 @@ def download_youtube_media(
     output_path: str = "na",
 ):
     """Download a YouTube or similar media URL to the desired format."""
+    ffmpeg_location = str(get_ffmpeg_dir())
     current_directory = os.getcwd()
     output_extn = output_audio_format if audio_only else output_video_format
 
@@ -125,7 +125,7 @@ def download_youtube_media(
         ydl_opts = {
             "format": f"bestaudio[ext={src_audio_format}]/best[ext={src_audio_format}]/bestaudio",
             "outtmpl": outputtmpl,
-            "ffmpeg_location": FFMPEG_DIR,
+            "ffmpeg_location": ffmpeg_location,
             "postprocessors": [{
                 "key": "FFmpegExtractAudio",
                 "preferredcodec": output_audio_format,
@@ -147,6 +147,7 @@ def download_youtube_media(
         ydl_opts = {
             "format": f"bestvideo[height<={src_video_resolution}][ext={src_video_format}]/bestvideo+bestaudio",
             "outtmpl": outputtmpl,
+            "ffmpeg_location": ffmpeg_location,
             "postprocessors": [{
                 "key": "FFmpegVideoConvertor",
                 "preferedformat": output_video_format,
