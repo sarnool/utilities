@@ -83,6 +83,10 @@ Utilities/
 - Converts audio files to different formats
 - Useful for preparing audio before transcription or playback
 
+### Video converter
+- Converts video files to MP4, MKV, WebM, MOV, or AVI
+- Uses the configured FFmpeg installation
+
 ### YouTube downloader
 - Lists available media formats
 - Downloads video or audio from supported URLs

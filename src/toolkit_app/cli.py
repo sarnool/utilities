@@ -30,10 +30,10 @@ def convert_audio_cli():
 def download_youtube_cli():
     parser = argparse.ArgumentParser(description="Download media from a URL")
     parser.add_argument("url")
-    parser.add_argument("--audio-only", action="store_true")
+    parser.add_argument("--format-id", default=None, help="yt-dlp format ID from the available formats")
     parser.add_argument("--output-path", default=".")
     args = parser.parse_args()
-    print(download_youtube_media(args.url, audio_only=args.audio_only, output_path=args.output_path))
+    print(download_youtube_media(args.url, format_id=args.format_id, output_path=args.output_path))
 
 
 def translate_text_cli():

@@ -4,6 +4,7 @@ import importlib
 def test_package_modules_exist():
     modules = [
         "utilities.audio_tools",
+        "utilities.video_tools",
         "utilities.youtube_tools",
         "utilities.translation_tools",
         "utilities.transcription_tools",
@@ -18,12 +19,14 @@ def test_package_modules_exist():
 
 def test_expected_functions_exist():
     from utilities.audio_tools import convert_audio
+    from utilities.video_tools import convert_video
     from utilities.youtube_tools import download_youtube_media
     from utilities.translation_tools import translate_text, translate_file
     from utilities.transcription_tools import transcribe_audio
     from utilities.html_cleaner import replace_in_files_wrapper
 
     assert callable(convert_audio)
+    assert callable(convert_video)
     assert callable(download_youtube_media)
     assert callable(translate_text)
     assert callable(translate_file)

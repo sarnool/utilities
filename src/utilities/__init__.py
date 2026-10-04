@@ -1,6 +1,7 @@
 """Utilities toolkit package."""
 
 from .audio_tools import convert_audio
+from .video_tools import convert_video
 from .youtube_tools import download_youtube_media
 from .html_cleaner import replace_in_files_wrapper
 
@@ -21,6 +22,7 @@ except Exception:  # pragma: no cover - optional dependency compatibility guard
 
 __all__ = [
     "convert_audio",
+    "convert_video",
     "download_youtube_media",
     "translate_text",
     "translate_file",

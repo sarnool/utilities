@@ -2,71 +2,86 @@
 
 from __future__ import annotations
 
-import json
 import os
 import re
-import subprocess
 from pathlib import Path
+from typing import Any, cast
 
 import yt_dlp
 
 from .ffmpeg_config import get_ffmpeg_dir
 
 
+class FormatListingError(RuntimeError):
+    """Raised when media formats cannot be retrieved for a URL."""
+
+
+def describe_media_error(error: Exception, operation: str = "format listing") -> str:
+    """Return a concise, actionable message for a media operation failure."""
+    message = str(error)
+    lowered_message = message.lower()
+    if "certificate_verify_failed" in lowered_message or "ssl" in lowered_message:
+        return "The secure connection to YouTube failed. Check your proxy or certificate settings."
+    if "cookie" in lowered_message or "cookies" in lowered_message:
+        return "Chrome cookies could not be read. Close Chrome or allow yt-dlp to access browser cookies."
+    if "unsupported url" in lowered_message or "not a valid url" in lowered_message:
+        return "This URL is not supported. Check that you copied a complete media URL."
+    if "private" in lowered_message or "sign in" in lowered_message or "login" in lowered_message:
+        return "This media is private or requires sign-in, so its formats cannot be listed."
+    if operation == "download":
+        return "The selected media format could not be downloaded. Check the URL and try again."
+    return "The media service could not provide formats. Check the URL and try again."
+
+
 def list_formats(url: str):
     """List downloadable audio/video formats for a URL."""
-    command = ["yt-dlp", "--cookies-from-browser", "chrome", "--list-formats", url]
-    try:
-        output = subprocess.run(
-            command,
-            capture_output=True,
-            text=True,
-            check=True,
-            timeout=60,
-            stdin=subprocess.DEVNULL,
-        )
-    except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
-        return [], []
+    options: dict[str, Any] = {
+        "quiet": True,
+        "no_warnings": True,
+        "noplaylist": True,
+        "cookiesfrombrowser": ("chrome",),
+    }
+    info: dict[str, Any] | None = None
+    last_error: Exception | None = None
+    anonymous_options = {key: value for key, value in options.items() if key != "cookiesfrombrowser"}
+    insecure_options = {**anonymous_options, "nocheckcertificate": True}
+    for extractor_options in (options, anonymous_options, insecure_options):
+        try:
+            with yt_dlp.YoutubeDL(cast(Any, extractor_options)) as downloader:
+                info = cast(dict[str, Any], downloader.extract_info(url, download=False))
+            break
+        except Exception as error:
+            last_error = error
+            continue
+    if info is None:
+        raise FormatListingError(describe_media_error(last_error or RuntimeError()))
 
-    lines = output.stdout.strip().split("\n")
-    start_collecting = False
     audio_formats = []
     video_formats = []
-    header_line = ""
-
-    for line in lines:
-        if not start_collecting:
-            if line[:10] == "----------":
-                start_collecting = True
-            else:
-                header_line = line
+    for source_format in info.get("formats", []):
+        format_id = source_format.get("format_id")
+        if not format_id:
             continue
 
-        if "|" not in line:
-            continue
+        format_details = {
+            "format_id": format_id,
+            "extn": source_format.get("ext", ""),
+            "filesize": source_format.get("filesize") or source_format.get("filesize_approx") or "",
+        }
+        video_codec = source_format.get("vcodec")
+        audio_codec = source_format.get("acodec")
+        if video_codec == "none" and audio_codec not in (None, "none"):
+            format_details["quality"] = source_format.get("abr") or ""
+            audio_formats.append(format_details)
+        elif video_codec not in (None, "none", "images"):
+            format_details["resolution"] = source_format.get("resolution") or ""
+            video_formats.append(format_details)
 
-        seg_1 = line.split("|")[0]
-        extn = seg_1[header_line.find("EXT"):header_line.find("RESOLUTION")].strip()
-        resolution = seg_1[header_line.find("RESOLUTION"):].strip()
-
-        seg_2 = line.split("|")[1]
-        filesize = seg_2[:header_line.split("|")[1].find("FILESIZE") + len("FILESIZE")].strip()
-
-        seg_3 = line.split("|")[2]
-        videoonly = seg_3[header_line.split("|")[2].find("ACODEC"):header_line.split("|")[2].find("ACODEC") + 13].strip()
-        abr = seg_3[header_line.split("|")[2].find("ABR") - 1:header_line.split("|")[2].find("ABR") + 4].strip()
-        moreinfo = seg_3[header_line.split("|")[2].find("MORE INFO"):].strip()
-        if header_line.split("|")[2].find("MORE INFO") == -1:
-            moreinfo = "tiktok"
-
-        if resolution.lower() == "audio only":
-            if len(abr.strip()) > 0:
-                audio_formats.append({"extn": extn, "filesize": filesize, "quality": abr})
-        elif videoonly.lower() == "video only" or resolution.find("x") > 0:
-            if len(moreinfo.strip()) > 0:
-                video_formats.append({"extn": extn, "filesize": filesize, "resolution": resolution})
-
-        video_formats = [json.loads(x) for x in {json.dumps(v) for v in video_formats}]
+    if not audio_formats and not video_formats:
+        raise FormatListingError(
+            "The URL was reached, but it returned no downloadable audio or video formats. "
+            "It may be private, restricted, or unavailable."
+        )
 
     return audio_formats, video_formats
 
@@ -90,15 +105,12 @@ def identify_source(url: str) -> str:
 
 def download_youtube_media(
     url: str,
-    audio_only: bool = True,
-    output_video_format: str = "mp4",
-    output_audio_format: str = "wav",
+    format_id: str | None = None,
     output_path: str = "na",
 ):
-    """Download a YouTube or similar media URL to the desired format."""
+    """Download a YouTube or similar media URL in the selected format."""
     ffmpeg_location = str(get_ffmpeg_dir())
     current_directory = os.getcwd()
-    output_extn = output_audio_format if audio_only else output_video_format
 
     output_path = Path(output_path) if output_path != "na" else Path(current_directory)
     output_path = output_path / "downloaded_media" if output_path.is_dir() else output_path
@@ -109,59 +121,14 @@ def download_youtube_media(
     else:
         outputtmpl = rf"{output_path_wo_extn}.%(ext)s"
 
-    audio_formats, video_formats = list_formats(url)
-    url_source = identify_source(url)
-
-    if audio_only:
-        if url_source not in ("tiktok", "other"):
-            print("\n".join([json.dumps(v) for v in audio_formats]))
-            type_quality = input("Enter audio format and quality separated by comma (eg, webm, 104k): ")
-            src_audio_format = type_quality.split(",")[0].strip()
-            src_audio_quality = type_quality.split(",")[1].strip().replace("k", "")
-        else:
-            src_audio_format = "na"
-            src_audio_quality = "na"
-
-        ydl_opts = {
-            "format": f"bestaudio[ext={src_audio_format}]/best[ext={src_audio_format}]/bestaudio",
-            "outtmpl": outputtmpl,
-            "ffmpeg_location": ffmpeg_location,
-            "postprocessors": [{
-                "key": "FFmpegExtractAudio",
-                "preferredcodec": output_audio_format,
-                "preferredquality": src_audio_quality,
-            }],
-            "subtitleslangs": ["en"],
-            "writesubtitles": True,
-        }
-    else:
-        if url_source not in ("tiktok", "other"):
-            print("\n".join([json.dumps(v) for v in video_formats]))
-            type_quality = input("Enter video format and resolution separated by comma: ")
-            src_video_format = type_quality.split(",")[0].strip()
-            src_video_resolution = type_quality.split(",")[1].strip().replace("k", "")
-        else:
-            src_video_resolution = "na"
-            src_video_format = "na"
-
-        ydl_opts = {
-            "format": f"bestvideo[height<={src_video_resolution}][ext={src_video_format}]/bestvideo+bestaudio",
-            "outtmpl": outputtmpl,
-            "ffmpeg_location": ffmpeg_location,
-            "postprocessors": [{
-                "key": "FFmpegVideoConvertor",
-                "preferedformat": output_video_format,
-            }],
-            "subtitleslangs": ["en"],
-            "writesubtitles": True,
-        }
-
-    if "format" in ydl_opts:
-        ydl_opts.pop("format")
-
-    for postprocessor in ydl_opts.get("postprocessors", []):
-        if "preferredquality" in postprocessor:
-            postprocessor.pop("preferredquality")
+    ydl_opts = {
+        "format": format_id or "bestvideo+bestaudio/best",
+        "outtmpl": outputtmpl,
+        "ffmpeg_location": ffmpeg_location,
+        "noplaylist": True,
+        "subtitleslangs": ["en"],
+        "writesubtitles": True,
+    }
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         ydl.download([url])
